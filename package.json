@@ -18,20 +18,21 @@
     "url": "https://github.com/headbase-app/relay/issues"
   },
   "scripts": {
-    "start": "tsx ./src/index.ts",
-    "test": "echo 'tests not setup yet'",
+    "start": "tsx src/server.ts",
+    "test": "vitest run",
     "prepare": "husky"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.3.1",
     "@commitlint/config-conventional": "^20.3.1",
+    "@types/express": "^5.0.6",
     "@types/ws": "^8.18.1",
     "husky": "^9.1.7",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.16"
   },
   "dependencies": {
-    "@types/express": "^5.0.6",
     "express": "^5.2.1",
     "ws": "^8.19.0"
   },
