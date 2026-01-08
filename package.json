@@ -1,0 +1,40 @@
+{
+  "name": "@headbase-app/relay",
+  "version": "0.0.0",
+  "description": "A websocket server allowing peers to connect and relay messages.",
+  "main": "./build/index.js",
+  "type": "module",
+  "directories": {
+    "doc": "docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/headbase-app/relay.git"
+  },
+  "author": "Ben Ryder (https://www.benryder.me)",
+  "license": "AGPL-3.0-only",
+  "homepage": "https://github.com/headbase-app/relay#readme",
+  "bugs": {
+    "url": "https://github.com/headbase-app/relay/issues"
+  },
+  "scripts": {
+    "start": "tsx ./src/index.ts",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^20.3.1",
+    "@commitlint/config-conventional": "^20.3.1",
+    "@types/ws": "^8.18.1",
+    "husky": "^9.1.7",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@types/express": "^5.0.6",
+    "express": "^5.2.1",
+    "ws": "^8.19.0"
+  },
+  "optionalDependencies": {
+    "bufferutil": "^4.1.0"
+  }
+}
