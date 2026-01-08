@@ -19,6 +19,7 @@
   },
   "scripts": {
     "start": "tsx ./src/index.ts",
+    "test": "echo 'tests not setup yet'",
     "prepare": "husky"
   },
   "devDependencies": {
