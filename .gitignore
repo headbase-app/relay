@@ -3,6 +3,8 @@
 
 # Build
 /build
+/hb-relay-inspect.tar
+/hb-relay-inspect
 
 # OS
 .DS_Store

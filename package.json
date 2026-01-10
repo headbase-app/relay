@@ -19,7 +19,7 @@
   },
   "scripts": {
     "start": "tsx src/index.ts",
-    "start:prod": "node ./build/index.js",
+    "start:build": "node ./build/index.js",
     "test": "vitest run --no-file-parallelism",
     "build": "rimraf ./build && tsc",
     "prepare": "husky"

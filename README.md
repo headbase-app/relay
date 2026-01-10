@@ -4,14 +4,48 @@ A websocket server allowing peers to connect and relay messages.
 The server implementation itself is very generic, however the intention within Headbase is for it to be used for "peer to peer style" synchronisation of 
 data between devices.
 
-## About
-TODO
+## Usage
+Docker is the only supported way of running the server in production. You can learn more at [docs/user/self-hosting.md](./docs/user/self-hosting.md).
 
 ## Local Development
-- Setup: `npm install`
-- Run locally: `npm start`
-- Run tests: `npm run test`
-- Build: `npm run build`
+
+### Prerequisites
+- Node.js and NPM (LTS)
+- Docker (if testing docker builds)
+
+### Setup
+
+1. Install dependencies:
+```
+npm install
+```
+
+2. Configure environment variables (if desired, the server has default it will use):
+```
+cp .env.example .env
+```
+
+### Development
+
+1. Run the app in dev mode:
+```
+npm start
+```
+
+2. Run tests:
+```
+npm run tests
+```
+
+3. Run a build:
+```
+npm run build
+```
+
+4. Run the build:
+```
+npm run start:build
+```
 
 ## Contributions
 This project is currently open source, not open contribution.

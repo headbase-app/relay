@@ -9,7 +9,7 @@ export interface Config {
 
 export function config(): Config {
 	// todo: parse/validate variables before using
-	const PORT = parseInt(process.env.PORT as string) || 3000
+	const PORT = parseInt(process.env.PORT as string) || 8080
 	const ADMIN_SECRET = process.env.ADMIN_SECRET || null
 	const SERVER_VERSION = "v1.0"
 	const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(",") : ["*"]
