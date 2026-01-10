@@ -109,7 +109,7 @@
   },
   "include": [
     "src"
-  ],
+, "tests"  ],
   "exclude": [
     "tests",
     "**/*.test.ts",

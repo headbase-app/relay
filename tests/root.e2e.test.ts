@@ -1,6 +1,6 @@
 import {describe, test, expect} from "vitest";
 import supertest from "supertest"
-import {createServer} from "../server";
+import {createServer} from "../src/server";
 
 describe('/ [GET]', () => {
 	test('Root endpoint should message', async () => {

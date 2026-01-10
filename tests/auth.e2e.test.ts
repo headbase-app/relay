@@ -1,4 +1,4 @@
-import {createServer} from "../server";
+import {createServer} from "../src/server";
 import {describe, test} from "vitest";
 import {
 	expectSocketsError,

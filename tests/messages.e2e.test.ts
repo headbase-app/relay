@@ -1,4 +1,4 @@
-import {createServer} from "../server";
+import {createServer} from "../src/server";
 import {describe, beforeEach, afterEach, test, expect} from "vitest";
 import {expectNoSocketMessageForDuration, expectSocketMessage, expectSocketsOpen} from "./helpers/helpers";
 
