@@ -17,7 +17,24 @@ During the upgrade to websockets the server will:
 
 ## Messages
 - `discover`
-	- Sent to discover other connected devices.
-	- Devices should respond directly via "ack" events.
+	- Sent to discover other connected peers.
+	- Peers must reply with `announce` message
 - `announce`
-	- Sent to announce presence to other connected devices.
+	- Sent to announce peer details to other connected peer: `peerId, isProvider,
+	- Must be sent when connecting or reconnecting
+		- Must be sent after receiving a `discover` message
+- `sync`
+	- Sent to request snapshot data from all connected peers
+	- Peers should reply with a `snapshot` message if able, but may choose not to for reasons such as performance or if that peer is busy with its own sync
+		- The sending peer should expect `snapshot` replies may be delayed by a few seconds and handle accordingly
+- `snapshot`
+	- Sent in response to a `sync` message, contains id and deletion state of all objects the peer knows about
+- `get`
+	- Sent to request a specific object
+	- If another connected peer has announced itself as a "provider", the sending client should first attempt to send the message directly to that peer
+		- If multiple connected peers have announced themselves as "providers", the sending client should use the peer "priority" data if present to pick the peer
+		- If the target peer does not respond directly, the sending peer may then choose to send the message globally
+- `create`
+	- Sent by a peer when an object is created
+- `delete`
+	- Sent by a peer when an object is deleted 

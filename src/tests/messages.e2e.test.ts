@@ -1,9 +1,9 @@
 import {createServer} from "../server";
 import {describe, beforeEach, afterEach, test, expect} from "vitest";
-import {expectNoSocketMessageForDuration, expectSocketMessage, expectSocketsOpen} from "./helpers";
+import {expectNoSocketMessageForDuration, expectSocketMessage, expectSocketsOpen} from "./helpers/helpers";
 
-describe('Relay Server', () => {
-	const server = createServer();
+describe('Relaying messages', () => {
+	const server = createServer({adminSecret: null});
 
 	beforeEach(() => {
 		server.listen(42100);
@@ -13,10 +13,8 @@ describe('Relay Server', () => {
 	});
 
 	test('Two sockets can connect and relay messages', async () => {
-		const relayId = 'test-1'
-
-		const socket1 = new WebSocket(`ws://localhost:42100/v1/${relayId}`)
-		const socket2 = new WebSocket(`ws://localhost:42100/v1/${relayId}`)
+		const socket1 = new WebSocket(`ws://localhost:42100/v1?peerId=peer-1&relayId=relay-1`)
+		const socket2 = new WebSocket(`ws://localhost:42100/v1?peerId=peer-2&relayId=relay-1`)
 		await expectSocketsOpen([socket1, socket2]);
 
 		await expectSocketMessage(
@@ -31,10 +29,8 @@ describe('Relay Server', () => {
 	});
 
 	test('Messages should not be relayed back to sender', async () => {
-		const relayId = 'test-1'
-
-		const socket1 = new WebSocket(`ws://localhost:42100/v1/${relayId}`)
-		const socket2 = new WebSocket(`ws://localhost:42100/v1/${relayId}`)
+		const socket1 = new WebSocket(`ws://localhost:42100/v1?peerId=peer-1&relayId=relay-1`)
+		const socket2 = new WebSocket(`ws://localhost:42100/v1?peerId=peer-2&relayId=relay-1`)
 		await expectSocketsOpen([socket1, socket2]);
 
 		const expectNoSocket1Messages = expectNoSocketMessageForDuration(socket1, 1000)
@@ -52,13 +48,10 @@ describe('Relay Server', () => {
 	});
 
 	test('Messages should not leak between relays', async () => {
-		const relayId1 = 'test-1'
-		const relayId2 = 'test-2'
-
-		const relay1socket1 = new WebSocket(`ws://localhost:42100/v1/${relayId1}`)
-		const relay1socket2 = new WebSocket(`ws://localhost:42100/v1/${relayId1}`)
-		const relay2socket1 = new WebSocket(`ws://localhost:42100/v1/${relayId2}`)
-		const relay2socket2 = new WebSocket(`ws://localhost:42100/v1/${relayId2}`)
+		const relay1socket1 = new WebSocket(`ws://localhost:42100/v1?peerId=peer-1&relayId=relay-1`)
+		const relay1socket2 = new WebSocket(`ws://localhost:42100/v1?peerId=peer-2&relayId=relay-1`)
+		const relay2socket1 = new WebSocket(`ws://localhost:42100/v1?peerId=peer-1&relayId=relay-2`)
+		const relay2socket2 = new WebSocket(`ws://localhost:42100/v1?peerId=peer-2&relayId=relay-2`)
 		await expectSocketsOpen([relay1socket1, relay1socket2, relay2socket1, relay2socket2]);
 
 		const expectNoMessages1 = expectNoSocketMessageForDuration(relay2socket1, 1000)
