@@ -1,6 +1,6 @@
 {
   "name": "@headbase-app/relay",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "A websocket server allowing peers to connect and relay messages.",
   "main": "./build/index.js",
   "type": "module",
