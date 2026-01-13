@@ -1,0 +1,124 @@
+import {createServer} from "../src/server";
+import {describe, test, expect, beforeEach, afterEach} from "vitest";
+import {
+	inspectNextMessage,
+	awaitSocketsOpen,
+	awaitSocketsClose,
+	inspectMessagesForDuration,
+	expectOpenForDuration
+} from "./helpers/helpers";
+
+
+describe('Connection checks', () => {
+	const CONNECTION_CHECK_INTERVAL = 1000
+	const CONNECTION_CHECK_TEST_DURATION = CONNECTION_CHECK_INTERVAL*4
+	const CONNECTION_CHECK_TEST_TIMEOUT = CONNECTION_CHECK_INTERVAL*6
+	const server = createServer({adminSecret: null, connectionCheckInterval: CONNECTION_CHECK_INTERVAL});
+
+	beforeEach(() => {
+		server.listen(42100);
+	});
+	afterEach(() => {
+		server.close();
+	});
+
+	test('When a peer sends ping, Then server should reply with pong', async () => {
+		const socket1 = new WebSocket(`ws://localhost:42100/v1?peerId=peer-1&relayId=relay-1`)
+		await awaitSocketsOpen([socket1]);
+
+		await inspectNextMessage(
+			socket1,
+			(event: MessageEvent) => {
+				expect.soft(event.data).toEqual("pong")
+			},
+			() => {
+				socket1.send("ping")
+			},
+		)
+	}, CONNECTION_CHECK_TEST_TIMEOUT);
+
+	test('When a peer sends ping, Then server should not relay to other devices', async (ctx) => {
+		const socket1 = new WebSocket(`ws://localhost:42100/v1?peerId=peer-1&relayId=relay-1`)
+		const socket2 = new WebSocket(`ws://localhost:42100/v1?peerId=peer-2&relayId=relay-1`)
+		await awaitSocketsOpen([socket1, socket2]);
+
+		const expectNoSocket2Messages = inspectMessagesForDuration(socket2, CONNECTION_CHECK_TEST_DURATION, (e) => {
+			expect.soft(e.data).not.toEqual("pong")
+		})
+		const expectSocket1Message = inspectNextMessage(
+			socket1,
+			(event: MessageEvent) => {
+				expect.soft(event.data).toEqual("pong")
+			},
+			() => {
+				socket1.send("ping")
+			},
+		)
+
+		await Promise.all([expectSocket1Message, expectNoSocket2Messages])
+	}, CONNECTION_CHECK_TEST_TIMEOUT);
+
+	test("When peer responds to server pings, Then server should maintain the connection", async (ctx) => {
+		const socket1 = new WebSocket(`ws://localhost:42100/v1?peerId=peer-1&relayId=relay-1`);
+		socket1.onmessage = (e) => {
+			if (e.data === "ping") {
+				socket1.send("pong")
+			}
+		}
+		await awaitSocketsOpen([socket1]);
+		await expectOpenForDuration(ctx, socket1, CONNECTION_CHECK_TEST_DURATION);
+	}, CONNECTION_CHECK_TEST_TIMEOUT);
+
+	test('When a peer sends pong, Then server should not relay to other devices', async () => {
+		const socket1 = new WebSocket(`ws://localhost:42100/v1?peerId=peer-1&relayId=relay-1`)
+		const socket2 = new WebSocket(`ws://localhost:42100/v1?peerId=peer-2&relayId=relay-1`)
+		await awaitSocketsOpen([socket1, socket2]);
+
+		const expectNoPong = inspectMessagesForDuration(
+			socket2,
+			CONNECTION_CHECK_TEST_DURATION,
+			(event: MessageEvent) => {
+				expect.soft(event.data).not.toEqual("pong")
+			},
+			() => {
+				socket1.send("pong")
+			}
+		)
+
+		await Promise.all([expectNoPong])
+	}, CONNECTION_CHECK_TEST_TIMEOUT);
+
+	test("When peer doesn't respond to server pings for CONNECTION_CHECK_INTERVAL, Then server should close the connection", async () => {
+		const socket1 = new WebSocket(`ws://localhost:42100/v1?peerId=peer-1&relayId=relay-1`)
+		await awaitSocketsClose([socket1])
+	}, CONNECTION_CHECK_TEST_TIMEOUT);
+
+	test("When peer sends messages but not ping replies for CONNECTION_CHECK_INTERVAL, Then server should still maintain the connection", async (ctx) => {
+		const socket1 = new WebSocket(`ws://localhost:42100/v1?peerId=peer-1&relayId=relay-1`);
+		await awaitSocketsOpen([socket1]);
+
+		const interval = setInterval(() => {
+			socket1.send("random")
+		}, CONNECTION_CHECK_INTERVAL/3)
+
+		await expectOpenForDuration(ctx, socket1, CONNECTION_CHECK_TEST_DURATION);
+
+		clearInterval(interval)
+	}, CONNECTION_CHECK_TEST_TIMEOUT);
+
+	test("Given multiple connected peers, When one doesn't reply to server pings, Then only that peer connection should be closed", async (ctx) => {
+		const socket1 = new WebSocket(`ws://localhost:42100/v1?peerId=peer-1&relayId=relay-1`);
+		const socket2 = new WebSocket(`ws://localhost:42100/v1?peerId=peer-2&relayId=relay-1`);
+		socket2.onmessage = (e) => {
+			if (e.data === "ping") {
+				socket2.send("pong")
+			}
+		}
+		await awaitSocketsOpen([socket1, socket2]);
+
+		const expectSocket1Close = awaitSocketsClose([socket1]);
+		const expectSocket2Open = expectOpenForDuration(ctx, socket2, CONNECTION_CHECK_TEST_DURATION);
+
+		await Promise.all([expectSocket1Close, expectSocket2Open]);
+	}, CONNECTION_CHECK_TEST_TIMEOUT*3);
+});

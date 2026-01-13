@@ -1,8 +1,8 @@
 import {createServer} from "../src/server";
 import {describe, test} from "vitest";
 import {
-	expectSocketsError,
-	expectSocketsOpen
+	awaitSocketsError,
+	awaitSocketsOpen
 } from "./helpers/helpers";
 
 describe('Authentication checks', () => {
@@ -12,7 +12,7 @@ describe('Authentication checks', () => {
 		server.listen(42100)
 
 		const socket1 = new WebSocket(`ws://localhost:42100/v1?peerId=peer-1&relayId=relay-1`, [ADMIN_SECRET])
-		await expectSocketsOpen([socket1]);
+		await awaitSocketsOpen([socket1]);
 
 		server.close();
 	});
@@ -23,7 +23,7 @@ describe('Authentication checks', () => {
 		server.listen(42100)
 
 		const socket1 = new WebSocket(`ws://localhost:42100/v1?peerId=peer-1&relayId=relay-1`, ["invalid"])
-		await expectSocketsError([socket1]);
+		await awaitSocketsError([socket1]);
 
 		server.close();
 	});
@@ -34,7 +34,7 @@ describe('Authentication checks', () => {
 		server.listen(42100)
 
 		const socket1 = new WebSocket(`ws://localhost:42100/v1?peerId=peer-1&relayId=relay-1`)
-		await expectSocketsError([socket1]);
+		await awaitSocketsError([socket1]);
 
 		server.close();
 	});

@@ -3,6 +3,7 @@ import {WebSocketServer, WebSocket, RawData} from "ws"
 import {Duplex} from "node:stream";
 
 import {Config} from "./config.js";
+import { logger } from "./logger.js";
 
 
 export interface RelayWebSocket extends WebSocket {
@@ -10,23 +11,31 @@ export interface RelayWebSocket extends WebSocket {
 	peerId: string
 	// The relay identifier supplied by the connecting socket used for relaying messages between sockets with the same relay id.
 	relayId: string
+	// Measuring connection activity to close unresponsive sockets
+	isAlive: boolean
 }
 
 export class RelayServer {
+	server: Server
 	#config: Config
-	server: Server;
 	#wss: WebSocketServer
+	#connectionCheck: NodeJS.Timeout
 
 	constructor(server: Server, config: Config) {
-		this.#config = config
+		this.#config = config;
 		this.server = server;
+
 		this.#wss = new WebSocketServer({ noServer: true });
+
 		server.on("upgrade", this.handleServerUpgrade.bind(this));
 		this.#wss.on("connection", this.handleConnection.bind(this));
+		this.#wss.on("close", this.handleClose.bind(this));
+
+		logger.info("server", `started connection checks every ${this.#config.connectionCheckInterval}ms`)
+		this.#connectionCheck = setInterval(this.runConnectionCheck.bind(this), this.#config.connectionCheckInterval);
 	}
 
 	async handleServerUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer) {
-		// todo: validate that the request is a given path?
 		if (!this.#config.allowedOrigins.includes("*")) {
 			if (!req.headers.origin || !this.#config.allowedOrigins.includes(req.headers.origin)) {
 				// todo: send error response of some kind?
@@ -68,18 +77,40 @@ export class RelayServer {
 	}
 
 	handleConnection(ws: RelayWebSocket) {
+		logger.info("connection", `peer '${ws.peerId}' connected to relay '${ws.relayId}'`)
+
 		// todo: is this needed?
-		ws.on("error", console.error);
+		ws.on("error", (e) => {
+			logger.error("server", `encountered error with peer '${ws.peerId}'`, e)
+		});
 
 		ws.on("message", async (data, isBinary) => {
 			// todo: validate to a set of expected messages?
 			// todo: apply rate limiting/abuse protection for clients?
 			this.handleMessage(ws, data, isBinary)
 		});
+
+		ws.on("close", async () => {
+			logger.info("connection", `peer '${ws.peerId}' disconnecting from relay '${ws.relayId}'`)
+		})
+	}
+
+	handleClose() {
+		logger.info("server", "server closing, stopping connection checks")
+		clearInterval(this.#connectionCheck)
 	}
 
 	handleMessage(sourceSocket: RelayWebSocket, data: RawData, isBinary?: boolean) {
 		const message = isBinary ? data : data.toString();
+
+		const relaySocket = (sourceSocket as RelayWebSocket)
+		relaySocket.isAlive = true
+
+		if (message === "pong") return
+		if (message === "ping") {
+			relaySocket.send("pong")
+			return;
+		}
 
 		let targetPeerId: string | null = null;
 		if (typeof message === "string") {
@@ -107,10 +138,24 @@ export class RelayServer {
 			// todo: this forEach might scale badly with lots of connected sockets?
 			// If so, sockets could be stored in a {relayId: socket[]} map to avoid looping over all clients.
 			this.#wss.clients.forEach((client) => {
-				if (client !== sourceSocket && (client as RelayWebSocket).relayId === sourceSocket.relayId && client.readyState === WebSocket.OPEN) {
+				if (client !== relaySocket && (client as RelayWebSocket).relayId === relaySocket.relayId && client.readyState === WebSocket.OPEN) {
 					client.send(data, {binary: isBinary})
 				}
 			})
 		}
+	}
+
+	runConnectionCheck() {
+		logger.debug("server", `running connection health check for ${this.#wss.clients.size} total peers`);
+
+		this.#wss.clients.forEach((ws) => {
+			const relaySocket = ws as RelayWebSocket;
+			if (relaySocket.isAlive === false) {
+				logger.info("connection", `disconnecting peer '${relaySocket.peerId}' from relay '${relaySocket.relayId}' due to failed connection check`)
+				return relaySocket.terminate();
+			}
+			relaySocket.isAlive = false;
+			relaySocket.send("ping");
+		});
 	}
 }

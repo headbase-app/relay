@@ -1,6 +1,6 @@
 import {createServer} from "../src/server";
 import {describe, beforeEach, afterEach, test, expect} from "vitest";
-import {expectNoSocketMessageForDuration, expectSocketMessage, expectSocketsOpen} from "./helpers/helpers";
+import {expectNoMessagesForDuration, inspectNextMessage, awaitSocketsOpen} from "./helpers/helpers";
 
 describe('Relaying messages', () => {
 	const server = createServer({adminSecret: null});
@@ -15,9 +15,9 @@ describe('Relaying messages', () => {
 	test('Two sockets can connect and relay messages', async () => {
 		const socket1 = new WebSocket(`ws://localhost:42100/v1?peerId=peer-1&relayId=relay-1`)
 		const socket2 = new WebSocket(`ws://localhost:42100/v1?peerId=peer-2&relayId=relay-1`)
-		await expectSocketsOpen([socket1, socket2]);
+		await awaitSocketsOpen([socket1, socket2]);
 
-		await expectSocketMessage(
+		await inspectNextMessage(
 			socket2,
 			(event: MessageEvent) => {
 				expect(event.data).toEqual("test")
@@ -28,13 +28,13 @@ describe('Relaying messages', () => {
 		)
 	});
 
-	test('Messages should not be relayed back to sender', async () => {
+	test('Messages should not be relayed back to sender', async (ctx) => {
 		const socket1 = new WebSocket(`ws://localhost:42100/v1?peerId=peer-1&relayId=relay-1`)
 		const socket2 = new WebSocket(`ws://localhost:42100/v1?peerId=peer-2&relayId=relay-1`)
-		await expectSocketsOpen([socket1, socket2]);
+		await awaitSocketsOpen([socket1, socket2]);
 
-		const expectNoSocket1Messages = expectNoSocketMessageForDuration(socket1, 1000)
-		const expectSocket2Message = expectSocketMessage(
+		const expectNoSocket1Messages = expectNoMessagesForDuration(ctx, socket1, 1000)
+		const expectSocket2Message = inspectNextMessage(
 			socket2,
 			(event: MessageEvent) => {
 				expect(event.data).toEqual("test")
@@ -47,17 +47,17 @@ describe('Relaying messages', () => {
 		await Promise.all([expectNoSocket1Messages, expectSocket2Message])
 	});
 
-	test('Messages should not leak between relays', async () => {
+	test('Messages should not leak between relays', async (ctx) => {
 		const relay1socket1 = new WebSocket(`ws://localhost:42100/v1?peerId=peer-1&relayId=relay-1`)
 		const relay1socket2 = new WebSocket(`ws://localhost:42100/v1?peerId=peer-2&relayId=relay-1`)
 		const relay2socket1 = new WebSocket(`ws://localhost:42100/v1?peerId=peer-1&relayId=relay-2`)
 		const relay2socket2 = new WebSocket(`ws://localhost:42100/v1?peerId=peer-2&relayId=relay-2`)
-		await expectSocketsOpen([relay1socket1, relay1socket2, relay2socket1, relay2socket2]);
+		await awaitSocketsOpen([relay1socket1, relay1socket2, relay2socket1, relay2socket2]);
 
-		const expectNoMessages1 = expectNoSocketMessageForDuration(relay2socket1, 1000)
-		const expectNoMessages2 = expectNoSocketMessageForDuration(relay2socket1, 1000)
+		const expectNoMessages1 = expectNoMessagesForDuration(ctx, relay2socket1, 1000)
+		const expectNoMessages2 = expectNoMessagesForDuration(ctx, relay2socket1, 1000)
 
-		const expectSocket1Message = expectSocketMessage(
+		const expectSocket1Message = inspectNextMessage(
 			relay1socket1,
 			(event: MessageEvent) => {
 				expect(event.data).toEqual("test")
