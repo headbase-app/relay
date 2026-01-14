@@ -1,15 +1,4 @@
-export interface LogInput {
-    level: "error" | "warn" | "info" | "debug",
-    message: string
-    context?: any
-    label: string
-}
-
-export interface LogOutput extends LogInput {
-    timestamp: string
-}
-
-export type LogMethod = (item: LogOutput) => void | Promise<void>
+import winston from "winston"
 
 export interface ILogger {
     error: (label: string, message: string, context?: any) => void,
@@ -19,55 +8,43 @@ export interface ILogger {
 }
 
 export class Logger implements ILogger {
-    #logMethod: LogMethod
-
-    constructor(logMethod: LogMethod) {
-        this.#logMethod = logMethod
-    }
-
-    #log(item: LogInput) {
-        const output: LogOutput = {
-            ...item,
-            timestamp: new Date().toISOString()
-        }
-        this.#logMethod(output)
-    }
+    #winston = winston.createLogger({
+        transports: [
+            new winston.transports.Console(),
+        ]
+    });
 
     warn(label: string, message: string, context?: any) {
-        this.#log({
-            level: "warn",
+        this.#winston.warn({
             label,
             message,
-            ...(context ? {context} : {})
+            context
         })
     }
 
     error(label: string, message: string, context?: any) {
-        this.#log({
-            level: "error",
+        this.#winston.error({
             label,
             message,
-            ...(context ? {context} : {})
+            context
         })
     }
 
     info(label: string, message: string, context?: any) {
-        this.#log({
-            level: "info",
+        this.#winston.info({
             label,
             message,
-            ...(context ? {context} : {})
+            context
         })
     }
 
     debug(label: string, message: string, context?: any) {
-        this.#log({
-            level: "debug",
+        this.#winston.debug({
             label,
             message,
-            ...(context ? {context} : {})
+            context
         })
     }
 }
 
-export const logger = new Logger(console.log)
+export const logger = new Logger();
